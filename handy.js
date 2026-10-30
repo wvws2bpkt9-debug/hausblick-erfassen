@@ -10,7 +10,8 @@
   const S = { kopplung: null, eintraege: [], ansicht: 'erfassen', cap: null, q: '', mk: null, loeschFrage: false, fehler: '' };
   const leer = () => ({ fotos: [], marken: [], code: null, ortText: '', text: '', zust: null, typ: 'Mangel' });
   S.cap = leer();
-  const ZUST = [['intern', 'Haustechnik'], ['TeDi', 'Technischer Dienst'], ['Firma', 'Firma'], ['offen', 'noch zu klären']];
+  // Zuständig am Handy nur Haustechnik oder Technischer Dienst; keine „Gefährdung“ (1.3.1-dev.3, U-40)
+  const ZUST = [['intern', 'Haustechnik'], ['TeDi', 'Technischer Dienst']];
   const FOTOS_MAX = 6, KANTE = 1600, QUALITAET = 0.82, B64 = /^[A-Za-z0-9+/]{43}=$/, KENNUNG = /^[0-9a-f]{12}$/;
 
   // ---------- Hilfen ----------
@@ -90,12 +91,13 @@
   }
   async function bestaetigen() {
     const c = S.cap; if (!fertig(c)) return;
+    // je Problem ein eigener Eintrag (eigenes Ticket in Hausblick), gleich ins Postfach
     S.eintraege.unshift({ hid: hex(crypto.getRandomValues(new Uint8Array(10))), d: new Date().toISOString(), text: c.text.trim().slice(0, 2000), code: c.code,
-      ortText: c.code ? null : c.ortText.trim().slice(0, 120), zust: c.zust, typ: c.typ, fotos: c.fotos, marken: c.marken, status: 'wartet' });
+      ortText: c.code ? null : c.ortText.trim().slice(0, 120), zust: c.zust, typ: 'Mangel', fotos: c.fotos, marken: c.marken, status: 'wartet' });
     await sichern();
     S.cap = leer(); S.q = ''; window.scrollTo(0, 0); zeichnen();
     const n = S.kopplung.postfach ? await senden() : 0;
-    toast(n ? 'Gesendet' : `Gespeichert · ${wartend()} ${wartend() === 1 ? 'wartet' : 'warten'} auf Übergabe`);
+    toast(n ? 'Gesendet' : S.kopplung.postfach ? 'Gespeichert – wird gesendet, sobald Netz da ist' : 'Gespeichert – unter ⋯ als Datei übergeben');
   }
   const wartend = () => S.eintraege.filter(e => e.status === 'wartet').length;
 
@@ -121,10 +123,11 @@
         try {
           const r = await fetch(`${k.postfach.url}/p/${k.postfach.id}/${e.hid}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: await paketInhalt([e]), cache: 'no-store' });
           if (!r.ok) break;
-          e.status = 'gesendet'; e.gesendet = new Date().toISOString(); n++;
+          e.status = 'gesendet'; n++;
         } catch (err) { break; }   // kein Netz: später erneut
       }
-      if (n) { await sichern(); zeichnen(); }
+      // Gesendetes liegt verschlüsselt im Postfach – auf dem Handy nicht mehr nötig (Fotos belegen sonst Speicher)
+      if (n) { S.eintraege = S.eintraege.filter(e => e.status !== 'gesendet'); await sichern(); zeichnen(); }
       return n;
     })().finally(() => { sendet = null; });
     return sendet;
@@ -162,7 +165,6 @@
       <div class="feld"><span class="lbl">Ort</span>${ort}</div>
       <label class="feld"><span class="lbl">Beschreibung</span><textarea id="text" maxlength="2000" placeholder="Was ist kaputt?">${esc(c.text)}</textarea></label>
       <div class="feld"><span class="lbl">Zuständig</span><div class="chips">${ZUST.map(([k, l]) => chip('zust', k, l, c.zust === k)).join('')}</div></div>
-      <div class="feld"><div class="chips">${chip('gefahr', '', 'Gefährdung', c.typ === 'Gefährdung', ' gefahr')}</div></div>
       <div class="fuss"><div class="innen"><button type="button" class="btn primary" data-act="ok" ${fertig(c) ? '' : 'disabled'}>✓ Bestätigen</button></div></div>`;
   }
   function trefferHTML() {
@@ -171,15 +173,18 @@
     return `<ul class="treffer">${l.map(r => `<li><button type="button" data-act="ort" data-k="${esc(r[0])}">${esc(r[1])}<small>${esc(r[0])}${r[2] ? ' · ' + esc(r[2]) : ''}</small></button></li>`).join('')}
       <li><button type="button" data-act="ort-frei">„${esc(S.q.trim())}“ als Ort verwenden<small>Ort noch zu klären</small></button></li></ul>`;
   }
+  // „⋯“ (1.3.1-dev.3): Noch nicht Gesendetes (nur ohne Netz bzw. ohne Postfach), Datei als Rückfall, Kopplung
   function uebergabeHTML() {
-    const n = S.eintraege.length, ueb = S.eintraege.filter(e => e.status !== 'wartet').length;
+    const n = S.eintraege.length, ueb = S.eintraege.filter(e => e.status !== 'wartet').length, pf = !!S.kopplung.postfach;
     const ortT = e => { const r = e.code && raum(e.code); return r ? `${r[1]} (${r[0]})` : e.ortText || ''; };
-    const st = { uebergeben: ' · <span class="st-ok">übergeben</span>', gesendet: ' · <span class="st-ok">gesendet</span>' };
-    return `<ul class="liste">${n ? S.eintraege.map(e => `<li><b>${esc(e.text.split(/[.,!]/)[0].slice(0, 70))}</b><small>${esc(ortT(e))} · ${esc(datum(new Date(e.d)))}${st[e.status] || ''}</small></li>`).join('') : '<li class="leer">Keine Einträge auf dem Handy.</li>'}</ul>
-      ${ueb ? `<button type="button" class="btn voll abstand" data-act="loeschen">${S.loeschFrage ? 'Wirklich vom Handy löschen?' : `Gesendete löschen (${ueb})`}</button>` : ''}
+    const st = { uebergeben: ' · <span class="st-ok">übergeben</span>' };
+    return `${n ? `<ul class="liste">${S.eintraege.map(e => `<li><b>${esc(e.text.split(/[.,!]/)[0].slice(0, 70))}</b><small>${esc(ortT(e))} · ${esc(datum(new Date(e.d)))}${st[e.status] || (pf ? ' · noch nicht gesendet' : '')}</small></li>`).join('')}</ul>
+        ${pf && wartend() ? '<button type="button" class="btn primary voll abstand" data-act="nachsenden">Jetzt senden</button>' : ''}
+        <button type="button" class="btn voll abstand" data-act="uebergeben">Als Datei übergeben</button>` : '<p class="leer">Alles gesendet.</p>'}
+      ${ueb ? `<button type="button" class="btn voll abstand" data-act="loeschen">${S.loeschFrage ? 'Wirklich vom Handy löschen?' : `Übergebene löschen (${ueb})`}</button>` : ''}
       <div class="karte"><b>Kopplung</b><small>${S.kopplung.raeume.length} Orte · Hausblick ${esc(FASSUNG)}</small>
         <label class="btn voll abstand">Neue Kopplungsdatei<input type="file" id="kopplung" accept=".json,application/json" hidden></label></div>
-      <div class="fuss"><div class="innen"><button type="button" class="btn" data-act="zurueck">Zurück</button><button type="button" class="btn primary" data-act="uebergeben" ${n ? '' : 'disabled'}>An PC übergeben</button></div></div>`;
+      <div class="fuss"><div class="innen"><button type="button" class="btn" data-act="zurueck">Zurück</button></div></div>`;
   }
   function koppelnHTML() {
     return `<div class="karte"><b>Noch nicht gekoppelt</b><small>Kopplungsdatei aus Hausblick wählen.</small>
@@ -193,8 +198,7 @@
   }
   function zeichnen() {
     const app = document.getElementById('app'); if (!app) return;
-    const n = wartend();
-    const kopf = `<header class="kopf"><h1>${S.ansicht === 'uebergabe' ? 'An PC übergeben' : 'Mangel erfassen'}</h1>${S.kopplung && S.ansicht !== 'uebergabe' ? `<button type="button" class="zaehler" data-act="liste" data-n="${S.eintraege.length}" aria-label="${n} warten auf Übergabe">${n} ${n === 1 ? 'wartet' : 'warten'}</button>` : ''}</header>`;
+    const kopf = `<header class="kopf"><h1>${S.ansicht === 'uebergabe' ? 'Weitere' : 'Mangel erfassen'}</h1>${S.kopplung && S.ansicht !== 'uebergabe' ? '<button type="button" class="mehr" data-act="liste" aria-label="Weitere: Übergabe und Kopplung">⋯</button>' : ''}</header>`;
     app.innerHTML = kopf + (!S.kopplung ? koppelnHTML() : S.ansicht === 'uebergabe' ? uebergabeHTML() : erfassenHTML()) + (S.mk ? mkHTML() : '');
     if (S.mk) mkZiehen();
   }
@@ -225,7 +229,8 @@
   const A = {
     ok: bestaetigen, liste: () => { S.ansicht = 'uebergabe'; S.loeschFrage = false; zeichnen(); }, zurueck: () => { S.ansicht = 'erfassen'; zeichnen(); },
     uebergeben: () => uebergeben().catch(e => toast('Übergabe nicht möglich: ' + (e && e.message || e))), loeschen,
-    zust: el => { S.cap.zust = el.dataset.k; zeichnen(); }, gefahr: () => { S.cap.typ = S.cap.typ === 'Gefährdung' ? 'Mangel' : 'Gefährdung'; zeichnen(); },
+    zust: el => { S.cap.zust = el.dataset.k; zeichnen(); },
+    nachsenden: async () => { const n = await senden(); toast(n ? `${n} gesendet` : 'Kein Netz – später erneut'); zeichnen(); },
     ort: el => { S.cap.code = el.dataset.k; S.cap.ortText = ''; S.q = ''; zeichnen(); }, 'ort-frei': () => { S.cap.code = null; S.cap.ortText = S.q.trim(); S.q = ''; zeichnen(); },
     'ort-x': () => { S.cap.code = null; S.cap.ortText = ''; zeichnen(); const q = document.getElementById('q'); if (q) q.focus(); },
     'foto-x': el => { const i = +el.dataset.k; S.cap.fotos.splice(i, 1); S.cap.marken.splice(i, 1); zeichnen(); },
