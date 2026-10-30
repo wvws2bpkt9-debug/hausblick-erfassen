@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1f4fa3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Erfassen">
+<title>Hausblick Erfassen</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="handy.css">
+</head>
+<body>
+<!-- Hausblick – Erfassen am Handy (1.3.1, U-37, E-87). Alles bleibt auf diesem Handy, bis Andy die Übergabedatei selbst
+     an den PC gibt. Die Seite lädt nur ihre eigenen Dateien; es gibt keine Verbindung zu Hausblick. -->
+<main id="app" aria-live="polite"></main>
+<div id="toast" role="status" hidden></div>
+<script src="handy.js"></script>
+</body>
+</html>
