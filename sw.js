@@ -1,5 +1,5 @@
 // Hausblick Erfassen – Offline-Speicher der Seite (nur die eigenen Programmdateien, nie Daten). Neue Fassung = neuer Name.
-const FASSUNG = 'hausblick-handy-1.3.1';
+const FASSUNG = 'hausblick-handy-1.3.1-postfach';
 const DATEIEN = ['./', 'index.html', 'handy.css', 'handy.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png',
   'fonts/source-sans-3-400.woff2', 'fonts/source-sans-3-500.woff2', 'fonts/source-sans-3-600.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(FASSUNG).then(c => c.addAll(DATEIEN)).then(() => self.skipWaiting())); });

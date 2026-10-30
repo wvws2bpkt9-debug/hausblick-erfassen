@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.workers.dev http://localhost:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#1f4fa3">
@@ -16,8 +16,9 @@
 <link rel="stylesheet" href="handy.css">
 </head>
 <body>
-<!-- Hausblick – Erfassen am Handy (1.3.1, U-37, E-87). Alles bleibt auf diesem Handy, bis Andy die Übergabedatei selbst
-     an den PC gibt. Die Seite lädt nur ihre eigenen Dateien; es gibt keine Verbindung zu Hausblick. -->
+<!-- Hausblick – Erfassen am Handy (1.3.1, U-37, E-87; Postfach U-38). Bestätigte Mängel gehen verschlüsselt ins
+     Hausblick-Postfach (Cloudflare Worker); Hausblick am PC holt sie dort ab. Ohne Netz bleiben sie auf dem Handy und werden
+     nachgesendet; als Rückfall gibt es weiter die Übergabedatei. Keine direkte Verbindung zum Programm. -->
 <main id="app" aria-live="polite"></main>
 <div id="toast" role="status" hidden></div>
 <script src="handy.js"></script>

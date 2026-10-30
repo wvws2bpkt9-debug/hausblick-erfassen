@@ -1,7 +1,9 @@
 // Hausblick Erfassen – Handyseite (1.3.1, U-37, E-87, Lösung C). Nur „Mangel erfassen“: Foto (mit Markieren), Ort, Beschreibung,
 // Zuständigkeit, Gefährdung. „Bestätigen“ legt den Eintrag auf DIESEM Handy ab (IndexedDB, auch ohne Netz). „An PC übergeben“
 // erzeugt eine verschlüsselte Datei (AES-GCM mit dem Schlüssel aus der Kopplungsdatei); Andy gibt sie selbst an den PC
-// (Mail, Teams, USB), Hausblick liest sie unter Einträge → „Vom Handy“. Keine Verbindung zum Programm, kein Server mit Daten.
+// (Mail, Teams, USB), Hausblick liest sie unter Einträge → „Vom Handy“. Seit U-38 (Freigabe IT 30.10.2026): Mit Postfach in der
+// Kopplungsdatei geht jeder bestätigte Eintrag gleich verschlüsselt ins Hausblick-Postfach (Cloudflare Worker, sieht nur
+// verschlüsselte Daten); Hausblick holt ihn dort mit „Gemeldete Mängel abrufen“. Ohne Netz wird nachgesendet.
 (function () {
   'use strict';
   const FASSUNG = '1.3.1';
@@ -40,7 +42,9 @@
     if (!j || j.format !== 'hausblick-handy-kopplung' || j.version !== 1 || !KENNUNG.test(j.kennung) || !B64.test(j.schluessel)) throw new Error('Keine Kopplungsdatei.');
     const raeume = (Array.isArray(j.raeume) ? j.raeume : []).slice(0, 5000).filter(r => Array.isArray(r) && typeof r[0] === 'string' && typeof r[1] === 'string')
       .map(r => [r[0].slice(0, 40), r[1].slice(0, 120), String(r[2] || '').slice(0, 60), String(r[3] || '').slice(0, 60)]);
-    return { kennung: j.kennung, schluessel: j.schluessel, raeume, erstellt: String(j.erstellt || '').slice(0, 30) };
+    // Postfach im Netz (1.3.1, U-38): nur eine Worker-Adresse (bzw. localhost für die Vorschau) und eine zufällige Kennung
+    const p = j.postfach && typeof j.postfach === 'object' && /^(https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev|http:\/\/localhost:\d{2,5})$/.test(String(j.postfach.url || '')) && /^[0-9a-f]{32}$/.test(String(j.postfach.id || '')) ? { url: j.postfach.url, id: j.postfach.id } : null;
+    return { kennung: j.kennung, schluessel: j.schluessel, postfach: p, raeume, erstellt: String(j.erstellt || '').slice(0, 30) };
   }
   async function koppeln(datei) {
     const k = kopplungAus(await datei.text());
@@ -90,17 +94,40 @@
       ortText: c.code ? null : c.ortText.trim().slice(0, 120), zust: c.zust, typ: c.typ, fotos: c.fotos, marken: c.marken, status: 'wartet' });
     await sichern();
     S.cap = leer(); S.q = ''; window.scrollTo(0, 0); zeichnen();
-    toast(`Gespeichert · ${wartend()} ${wartend() === 1 ? 'wartet' : 'warten'} auf Übergabe`);
+    const n = S.kopplung.postfach ? await senden() : 0;
+    toast(n ? 'Gesendet' : `Gespeichert · ${wartend()} ${wartend() === 1 ? 'wartet' : 'warten'} auf Übergabe`);
   }
   const wartend = () => S.eintraege.filter(e => e.status === 'wartet').length;
 
-  // ---------- Übergabe an den PC: eine verschlüsselte Datei mit allen Einträgen auf dem Handy ----------
-  async function dateiInhalt(jetzt) {
+  // ---------- Verschlüsseln: ein Paket mit Einträgen (gleiches Format für Postfach und Datei) ----------
+  async function paketInhalt(liste, jetzt) {
     const k = S.kopplung, enc = new TextEncoder();
-    const klar = enc.encode(JSON.stringify({ fassung: FASSUNG, eintraege: S.eintraege.map(e => ({ hid: e.hid, d: e.d, text: e.text, code: e.code, ortText: e.ortText, zust: e.zust, typ: e.typ, fotos: e.fotos.map(f => f.url), marken: e.marken })) }));
+    const klar = enc.encode(JSON.stringify({ fassung: FASSUNG, eintraege: liste.map(e => ({ hid: e.hid, d: e.d, text: e.text, code: e.code, ortText: e.ortText, zust: e.zust, typ: e.typ, fotos: e.fotos.map(f => f.url), marken: e.marken })) }));
     const schl = await crypto.subtle.importKey('raw', ausB64(k.schluessel), 'AES-GCM', false, ['encrypt']), iv = crypto.getRandomValues(new Uint8Array(12));
     const daten = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode(k.kennung) }, schl, klar));
-    return JSON.stringify({ format: 'hausblick-handy-uebergabe', version: 1, kennung: k.kennung, erstellt: (jetzt || new Date()).toISOString(), anzahl: S.eintraege.length, iv: b64(iv), daten: b64(daten) });
+    return JSON.stringify({ format: 'hausblick-handy-uebergabe', version: 1, kennung: k.kennung, erstellt: (jetzt || new Date()).toISOString(), anzahl: liste.length, iv: b64(iv), daten: b64(daten) });
+  }
+  // Übergabe an den PC per Datei: alle Einträge auf dem Handy
+  const dateiInhalt = jetzt => paketInhalt(S.eintraege, jetzt);
+
+  // ---------- Postfach (1.3.1, U-38): jeden wartenden Eintrag einzeln verschlüsselt ablegen; ohne Netz beim nächsten Mal ----------
+  let sendet = null;
+  function senden() {
+    if (sendet) return sendet;
+    sendet = (async () => {
+      const k = S.kopplung; let n = 0;
+      if (!k || !k.postfach) return 0;
+      for (const e of S.eintraege.filter(x => x.status === 'wartet')) {
+        try {
+          const r = await fetch(`${k.postfach.url}/p/${k.postfach.id}/${e.hid}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: await paketInhalt([e]), cache: 'no-store' });
+          if (!r.ok) break;
+          e.status = 'gesendet'; e.gesendet = new Date().toISOString(); n++;
+        } catch (err) { break; }   // kein Netz: später erneut
+      }
+      if (n) { await sichern(); zeichnen(); }
+      return n;
+    })().finally(() => { sendet = null; });
+    return sendet;
   }
   async function uebergeben() {
     if (!S.eintraege.length || !S.kopplung) return;
@@ -111,13 +138,13 @@
       try { await navigator.share({ files: [datei], title: 'Hausblick' }); geteilt = true; } catch (e) { if (e && e.name === 'AbortError') return; }
     }
     if (!geteilt) { const u = URL.createObjectURL(datei), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); }
-    S.eintraege.forEach(e => { e.status = 'uebergeben'; e.uebergeben = j.toISOString(); });
+    S.eintraege.forEach(e => { if (e.status === 'wartet') e.status = 'uebergeben'; e.uebergeben = j.toISOString(); });
     await sichern(); zeichnen();
     toast(geteilt ? 'Übergabedatei geteilt' : 'Übergabedatei gespeichert (Downloads)');
   }
   async function loeschen() {
     if (!S.loeschFrage) { S.loeschFrage = true; zeichnen(); return; }
-    S.eintraege = S.eintraege.filter(e => e.status !== 'uebergeben'); S.loeschFrage = false;
+    S.eintraege = S.eintraege.filter(e => e.status === 'wartet'); S.loeschFrage = false;
     await sichern(); zeichnen(); toast('Übergebene Einträge vom Handy gelöscht');
   }
 
@@ -145,10 +172,11 @@
       <li><button type="button" data-act="ort-frei">„${esc(S.q.trim())}“ als Ort verwenden<small>Ort noch zu klären</small></button></li></ul>`;
   }
   function uebergabeHTML() {
-    const n = S.eintraege.length, ueb = S.eintraege.filter(e => e.status === 'uebergeben').length;
+    const n = S.eintraege.length, ueb = S.eintraege.filter(e => e.status !== 'wartet').length;
     const ortT = e => { const r = e.code && raum(e.code); return r ? `${r[1]} (${r[0]})` : e.ortText || ''; };
-    return `<ul class="liste">${n ? S.eintraege.map(e => `<li><b>${esc(e.text.split(/[.,!]/)[0].slice(0, 70))}</b><small>${esc(ortT(e))} · ${esc(datum(new Date(e.d)))}${e.status === 'uebergeben' ? ' · <span class="st-ok">übergeben</span>' : ''}</small></li>`).join('') : '<li class="leer">Keine Einträge auf dem Handy.</li>'}</ul>
-      ${ueb ? `<button type="button" class="btn voll abstand" data-act="loeschen">${S.loeschFrage ? 'Wirklich vom Handy löschen?' : `Übergebene löschen (${ueb})`}</button>` : ''}
+    const st = { uebergeben: ' · <span class="st-ok">übergeben</span>', gesendet: ' · <span class="st-ok">gesendet</span>' };
+    return `<ul class="liste">${n ? S.eintraege.map(e => `<li><b>${esc(e.text.split(/[.,!]/)[0].slice(0, 70))}</b><small>${esc(ortT(e))} · ${esc(datum(new Date(e.d)))}${st[e.status] || ''}</small></li>`).join('') : '<li class="leer">Keine Einträge auf dem Handy.</li>'}</ul>
+      ${ueb ? `<button type="button" class="btn voll abstand" data-act="loeschen">${S.loeschFrage ? 'Wirklich vom Handy löschen?' : `Gesendete löschen (${ueb})`}</button>` : ''}
       <div class="karte"><b>Kopplung</b><small>${S.kopplung.raeume.length} Orte · Hausblick ${esc(FASSUNG)}</small>
         <label class="btn voll abstand">Neue Kopplungsdatei<input type="file" id="kopplung" accept=".json,application/json" hidden></label></div>
       <div class="fuss"><div class="innen"><button type="button" class="btn" data-act="zurueck">Zurück</button><button type="button" class="btn primary" data-act="uebergeben" ${n ? '' : 'disabled'}>An PC übergeben</button></div></div>`;
@@ -227,9 +255,11 @@
   async function start() {
     try { S.kopplung = (await lies('kopplung')) || null; S.eintraege = (await lies('eintraege')) || []; } catch (e) { toast('Achtung: Speicher nicht verfügbar – nur bis zum Schließen'); }
     zeichnen();
+    // Wartendes ins Postfach nachsenden: beim Öffnen und sobald wieder Netz da ist
+    senden(); window.addEventListener('online', () => senden());
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   }
-  window.HausblickHandy = { S, kopplungAus, dateiInhalt, bestaetigen, formenSVG, treffer, zeichnen, start: () => start() };
+  window.HausblickHandy = { S, kopplungAus, dateiInhalt, paketInhalt, senden, bestaetigen, formenSVG, treffer, zeichnen, start: () => start() };
   if (!window.HAUSBLICK_HANDY_TEST) start();
 })();
