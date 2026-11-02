@@ -1,4 +1,4 @@
-/* Hausblick Erfassen (Handy, 1.3.1, U-37) – Gestaltung „Amtlich klar“ wie Hausblick am PC, Schrift +20 % wie „Mangel erfassen“ (E-73) */
+/* AndyCare Erfassen (Handy, 1.3.1, U-37) – Gestaltung „Amtlich klar“ wie AndyCare am PC, Schrift +20 % wie „Mangel erfassen“ (E-73) */
 @font-face { font-family: 'Source Sans 3'; font-weight: 400; font-display: swap; src: url('fonts/source-sans-3-400.woff2') format('woff2'); }
 @font-face { font-family: 'Source Sans 3'; font-weight: 500; font-display: swap; src: url('fonts/source-sans-3-500.woff2') format('woff2'); }
 @font-face { font-family: 'Source Sans 3'; font-weight: 600; font-display: swap; src: url('fonts/source-sans-3-600.woff2') format('woff2'); }
@@ -52,6 +52,9 @@ textarea { min-height: 120px; resize: vertical; }
 .liste li { border-bottom: 1px solid var(--border); padding: 12px 0; }
 .liste small { display: block; color: var(--text-2); font-size: 16px; }
 .st-ok { color: var(--green); font-weight: 600; }
+.st-warn { color: var(--red); font-weight: 600; }
+.feld > .hinweis { display: block; color: var(--text-2); font-size: 16px; margin: -2px 0 8px; }
+input.code { font-size: 26px; letter-spacing: .12em; text-transform: uppercase; text-align: center; }
 .leer { color: var(--text-2); }
 #toast { position: fixed; left: 16px; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; padding: 14px 16px; border-radius: var(--radius); background: var(--text); color: #fff; font-weight: 500; }
 /* Markieren: Foto bildschirmfüllend, Pfeil oder Kreis ziehen */

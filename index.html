@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.workers.dev http://localhost:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://hausblick-postfach.k2cnzmm9ws.workers.dev http://localhost:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#1f4fa3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Erfassen">
-<title>Hausblick Erfassen</title>
+<title>AndyCare Erfassen</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="handy.css">
 </head>
 <body>
-<!-- Hausblick – Erfassen am Handy (1.3.1, U-37, E-87; Postfach U-38). Bestätigte Mängel gehen verschlüsselt ins
-     Hausblick-Postfach (Cloudflare Worker); Hausblick am PC holt sie dort ab. Ohne Netz bleiben sie auf dem Handy und werden
+<!-- AndyCare – Erfassen am Handy (1.3.1, U-37, E-87; Postfach U-38). Bestätigte Mängel gehen verschlüsselt ins
+     AndyCare-Postfach (Cloudflare Worker); AndyCare am PC holt sie dort ab. Ohne Netz bleiben sie auf dem Handy und werden
      nachgesendet; als Rückfall gibt es weiter die Übergabedatei. Keine direkte Verbindung zum Programm. -->
 <main id="app" aria-live="polite"></main>
 <div id="toast" role="status" hidden></div>
