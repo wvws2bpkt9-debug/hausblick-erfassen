@@ -9,7 +9,7 @@
 // Quittung im Postfach (z. B. verfallen), sendet das Handy es neu (AC-05).
 (function () {
   'use strict';
-  const FASSUNG = '1.3.1';
+  const FASSUNG = '1.3.2';
   const S = { kopplung: null, eintraege: [], ansicht: 'erfassen', cap: null, q: '', mk: null, loeschFrage: false, fehler: '', koppelText: null };
   const leer = () => ({ fotos: [], marken: [], code: null, ortText: '', text: '', zust: null, typ: 'Mangel' });
   S.cap = leer();
@@ -17,6 +17,8 @@
   const ZUST = [['intern', 'Haustechnik'], ['TeDi', 'Technischer Dienst']];
   const FOTOS_MAX = 6, KANTE = 1600, QUALITAET = 0.82, B64 = /^[A-Za-z0-9+/]{43}=$/, KENNUNG = /^[0-9a-f]{12}$/, ZUGANG = /^[A-Za-z0-9_-]{43}$/;
   const KOPPEL_ITER = 600000, KOPPEL_AAD = 'hausblick-handy-kopplung-v2', NACH_MIN = 10;   // NACH_MIN: Liste im Postfach hinkt nach
+  // Bildmarke „Grundriss“ wie App.logoMarke in core.js (E-91, E-94); Name steht als Text daneben (U-52)
+  const LOGO = '<svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><path d="M18 45H3V3H45V45H30M3 27H9M15 27H21V3" fill="none" stroke="#1F4FA3" stroke-width="3"/><path d="M27 24A6 6 0 1 0 39 24A6 6 0 1 0 27 24Z" fill="#1F4FA3"/></svg>';
 
   // ---------- Hilfen ----------
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -247,7 +249,7 @@
   }
   function zeichnen() {
     const app = document.getElementById('app'); if (!app) return;
-    const kopf = `<header class="kopf"><h1>${S.ansicht === 'uebergabe' ? 'Weitere' : 'Mangel erfassen'}</h1>${S.kopplung && S.ansicht !== 'uebergabe' ? '<button type="button" class="mehr" data-act="liste" aria-label="Weitere: Übergabe und Kopplung">⋯</button>' : ''}</header>`;
+    const kopf = `<header class="kopf"><h1>${S.ansicht === 'uebergabe' ? 'Weitere' : LOGO + 'AndyCareGo'}</h1>${S.kopplung && S.ansicht !== 'uebergabe' ? '<button type="button" class="mehr" data-act="liste" aria-label="Weitere: Übergabe und Kopplung">⋯</button>' : ''}</header>`;
     app.innerHTML = kopf + (!S.kopplung || S.koppelText ? koppelnHTML() : S.ansicht === 'uebergabe' ? uebergabeHTML() : erfassenHTML()) + (S.mk ? mkHTML() : '');
     if (S.mk) mkZiehen();
   }

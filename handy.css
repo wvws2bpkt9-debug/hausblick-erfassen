@@ -12,7 +12,8 @@ button, input, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 main { max-width: 640px; margin: 0 auto; padding: max(12px, env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom)); }
 .kopf { display: flex; align-items: center; gap: 12px; padding: 6px 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
-.kopf h1 { flex: 1; margin: 0; font-size: 26px; font-weight: 600; }
+.kopf h1 { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; margin: 0; font-size: 26px; font-weight: 600; }
+.kopf .logo { width: 32px; height: 32px; flex: none; }
 .zaehler { border: 1.5px solid var(--field); background: var(--bg); border-radius: var(--radius); padding: 8px 12px; font-weight: 600; font-size: 18px; }
 .zaehler[data-n="0"] { display: none; }
 .feld { display: block; margin: 18px 0 0; }
