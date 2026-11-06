@@ -1,0 +1,18 @@
+/* AndyCare – Kilometerstand per QR-Code (1.4.0-dev.17, U-63). Ergänzt handy.css: gleiche Schrift, Farben und Knöpfe. */
+.bus { margin: 0 0 4px; font-size: 18px; color: var(--text-2); }
+.bus b { display: block; font-size: 28px; color: var(--text); }
+input[type=date] { width: 100%; padding: 12px 14px; border: 1.5px solid var(--field); border-radius: var(--radius); background: var(--bg); font: inherit; color: inherit; }
+input.km { font-size: 30px; font-weight: 600; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+/* Code verdeckt ohne type=password, damit kein Passwortspeicher nachfragt */
+input.pin { width: 9em; font-size: 28px; letter-spacing: .4em; text-align: center; -webkit-text-security: disc; }
+.feld .fehler { display: block; margin-top: 6px; font-size: 18px; }
+input[aria-invalid=true] { border-color: var(--red); }
+.motor { margin: 18px 0 0; color: var(--text-2); font-size: 18px; font-weight: 600; }
+.status { margin: 28px 0 0; padding: 18px 16px; border-radius: var(--radius); border: 1.5px solid var(--border); }
+.status b { display: block; font-size: 26px; }
+.status.ok { border-color: var(--green); background: var(--green-100); }
+.status.ok b { color: var(--green); }
+.status.warn { border-color: var(--red); background: var(--red-100); }
+.status.warn b { color: var(--red); }
+.status span { display: block; margin-top: 6px; }
+.offen { margin: 14px 0 0; color: var(--text-2); font-size: 18px; }

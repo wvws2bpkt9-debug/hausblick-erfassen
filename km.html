@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://hausblick-postfach.k2cnzmm9ws.workers.dev http://localhost:*; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1f4fa3">
+<title>AndyCareGo · Kilometerstand</title>
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="handy.css">
+<link rel="stylesheet" href="km.css">
+</head>
+<body>
+<!-- AndyCare – Kilometerstand per QR-Code durch die Fahrer (1.4.0-dev.17, U-63, E-103). Aufruf nur über den Aufkleber an der
+     Fahrer-Sonnenblende: km.html#<Geheimnis>.<Busname>. Der Teil hinter „#“ geht nicht an den Server. Keine Installation,
+     kein Offline-Speicher der Seite, keine Namen. Der Stand geht verschlüsselt ins AndyCare-Postfach (Cloudflare Worker). -->
+<main id="app" aria-live="polite"></main>
+<script src="km.js"></script>
+</body>
+</html>
