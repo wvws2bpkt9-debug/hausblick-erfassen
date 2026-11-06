@@ -8,7 +8,7 @@
 // Geheimnis und ohne Code im Speicher der Seite, soweit der Browser ihn behält, und wird beim nächsten Scan vorbelegt.
 (function () {
   'use strict';
-  const FASSUNG = '1.4.0-dev.18';
+  const FASSUNG = '1.4.0-dev.21';
   let POSTFACH_URL = 'https://hausblick-postfach.k2cnzmm9ws.workers.dev';   // Cloudflare, Konto Philipp (wie handy.js)
   const KM_MAX = 2000000, ZURUECK_TAGE = 14, SPEICHER = 'andycare-km-offen', OFFEN_MAX = 10;
   const GEHEIM = /^[A-Za-z0-9_-]{43}$/, HID = /^[0-9a-f]{20}$/;
@@ -94,7 +94,8 @@
     } catch (err) { st = 0; }   // kein Netz
     sendet = false;
     if (st === 201 || st === 409) { vergessen(); S.offen = null; S.offenAlt = false; S.gesendet = e; S.code = ''; S.zustand = 'gesendet'; }
-    else if (st === 401) S.fehler = { code: 'Code falsch' };
+    // 1.4.0-dev.21 (Abnahme 06.11.): Feld leeren – sonst bleibt der falsche Code verdeckt stehen und maxlength 4 schluckt die neue Eingabe
+    else if (st === 401) { S.fehler = { code: 'Code falsch' }; S.code = ''; }
     else if (st === 410) { vergessen(); S.offen = null; S.code = ''; S.zustand = 'ersetzt'; }
     else S.meldung = 'nicht';
     zeichnen(st === 401 ? 'code' : null);
